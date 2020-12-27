@@ -1,8 +1,10 @@
 const express = require('express');
-const expressLayouts = require('express-ejs-layouts');
+
+const bodyParser = require('body-parser');
+
 const mongoose = require('mongoose');
+
 const passport = require('passport');
-const flash = require('connect-flash');
 const session = require('express-session');
 
 const app = express();
@@ -10,29 +12,35 @@ const app = express();
 // Passport Config
 require('./config/passport')(passport);
 
-// DB Config
-const db = require('./config/keys').mongoURI;
+
+const db_username = process.argv[2];
+const db_password = process.argv[3];
+console.log(db_username,db_password)
 
 // Connect to MongoDB
 mongoose
   .connect(
-    db,
+    `mongodb+srv://${db_username}:${db_password}@cluster0.wwsrh.mongodb.net/local?retryWrites=true&w=majority`,
     { useNewUrlParser: true ,useUnifiedTopology: true}
   )
   .then(() => console.log('MongoDB Connected'))
   .catch(err => console.log(err));
 
 // EJS
-app.use(expressLayouts);
 app.set('view engine', 'ejs');
 
 // Express body parser
-app.use(express.urlencoded({ extended: true }));
+app.use(bodyParser.json());
+// app.use(bodyParser.urlencoded());
+app.use(bodyParser.urlencoded({ extended: false }));
+
+require('dotenv').config()
+// console.log(process.env)
 
 // Express session
 app.use(
   session({
-    secret: 'secret',
+    secret: process.env.AUTH_SALT,
     resave: true,
     saveUninitialized: true
   })
@@ -42,21 +50,16 @@ app.use(
 app.use(passport.initialize());
 app.use(passport.session());
 
-// Connect flash
-app.use(flash());
-
-// Global variables
-app.use(function(req, res, next) {
-  res.locals.success_msg = req.flash('success_msg');
-  res.locals.error_msg = req.flash('error_msg');
-  res.locals.error = req.flash('error');
-  next();
-});
+// // Global variables
+// app.use(function(req, res, next) {
+//   res.locals.success_msg = req.flash('success_msg');
+//   res.locals.error_msg = req.flash('error_msg');
+//   res.locals.error = req.flash('error');
+//   next();
+// });
 
 // Routes
 app.use('/', require('./routes/index.js'));
-app.use('/users', require('./routes/users.js'));
+app.use('/user', require('./routes/user.js'));
 
-const PORT = process.env.PORT || 5000;
-
-app.listen(PORT, console.log(`Server running on  ${PORT}`));
+app.listen(process.env.SERVER_PORT, console.log(`Running on  ${process.env.SERVER_PORT}`));
